@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AtomicDSL/AtomicDSL.csproj" />
+  <Project Path="Fusion/Fusion.csproj" />
+</Solution>
