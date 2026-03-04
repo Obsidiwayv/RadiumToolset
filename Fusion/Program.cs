@@ -1,11 +1,16 @@
 ﻿using AtomicDSL;
+using AtomicDSL.Language;
 
 namespace Fusion;
 
 public class BuildTool
 {
+    public static string BinPath = @"Bin";
+
     public static void Main(string[] args)
     {
+        if (!Directory.Exists(BinPath)) Directory.CreateDirectory(BinPath);
+        
         string path = "";
         if (!args[0].EndsWith(AtomicConstants.FileExtention))
         {
@@ -23,6 +28,9 @@ public class BuildTool
             // Its already an atomic file just pass the argument
             path = args[0];
         }
-        AtomicLexer.Run(File.ReadAllText(path).ToCharArray());
+        List<AtomicNode> nodes = 
+            AtomicLexer.Run(File.ReadAllText(path).ToCharArray());
+        FusionCompilationStep step = new(AtomicParser.Use(nodes));
+        step.Assemble();
     }
 }

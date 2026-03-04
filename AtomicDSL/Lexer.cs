@@ -74,17 +74,14 @@ public class AtomicLexer
                 }
             } 
         }
+#if DEBUG
         foreach (var key in tokens)
         {
             Console.WriteLine($"KEY: {key.TokenType}, VALUE: {key.Value}");
         }
-
         Console.WriteLine($"Lines: {position.Row}");
-        return tokens;
-    }
+#endif
 
-    private static bool isInvalidChar(char pos)
-    {
-        return pos == '\t' || pos == '\r';
+        return tokens;
     }
 }
