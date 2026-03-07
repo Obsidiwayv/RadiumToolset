@@ -1,5 +1,6 @@
 ﻿using AtomicDSL;
 using AtomicDSL.Language;
+using RadiumCommon;
 
 namespace Fusion;
 
@@ -9,7 +10,12 @@ public class BuildTool
 
     public static void Main(string[] args)
     {
-        if (!Directory.Exists(BinPath)) Directory.CreateDirectory(BinPath);
+        if (!Directory.Exists(BinPath))
+        {
+            Directory.CreateDirectory(BinPath);
+        };
+
+        //AnsiColors.Init();
         
         string path = "";
         if (!args[0].EndsWith(AtomicConstants.FileExtention))

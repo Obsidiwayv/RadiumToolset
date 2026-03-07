@@ -7,9 +7,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="../AtomicDSL/AtomicDSL.csproj" />
-    <ProjectReference Include="../RadiumCommon/RadiumCommon.csproj" />
-  </ItemGroup>
-
 </Project>

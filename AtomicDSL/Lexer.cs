@@ -74,13 +74,6 @@ public class AtomicLexer
                 }
             } 
         }
-#if DEBUG
-        foreach (var key in tokens)
-        {
-            Console.WriteLine($"KEY: {key.TokenType}, VALUE: {key.Value}");
-        }
-        Console.WriteLine($"Lines: {position.Row}");
-#endif
 
         return tokens;
     }

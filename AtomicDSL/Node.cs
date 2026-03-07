@@ -6,11 +6,9 @@ public class AtomicNode
     public required string Value { get; init; }
 }
 
-public class AtomicLanguageNode(bool arr)
+public class AtomicLanguageNode()
 {
     public List<string> ArrayChildren = [];
 
     public List<KeyValuePair<string, string>> KeywordPair { get; set; } = [];
-
-    public bool IsArray { get; } = arr;
 }

@@ -1,4 +1,6 @@
 <Solution>
   <Project Path="AtomicDSL/AtomicDSL.csproj" />
+  <Project Path="Catalyst/Catalyst.csproj" />
   <Project Path="Fusion/Fusion.csproj" />
+  <Project Path="RadiumCommon/RadiumCommon.csproj" />
 </Solution>

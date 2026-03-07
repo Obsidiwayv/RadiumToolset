@@ -8,10 +8,11 @@ public class AtomicParser
     {
         Dictionary<string, AtomicLanguageNode> dict = new()
         {
-            {"includes", new(true)},
-            {"sources", new(true)},
-            {"assets", new(true)},
-            {"strings", new(false)},
+            {"includes", new()},
+            {"sources", new()},
+            {"assets", new()},
+            {"flags", new()},
+            {"strings", new()},
         };
 
         dict.TryGetValue("strings", out AtomicLanguageNode? strs);
@@ -56,17 +57,6 @@ public class AtomicParser
                 }
             }
         }
-
-#if DEBUG
-        foreach (var d in dict)
-        {
-            Console.WriteLine(
-                d.Value.IsArray 
-                    ? $"{d.Key} >> {string.Join(" ", d.Value.ArrayChildren)}"
-                    : string.Join(" ", d.Value.KeywordPair)
-            );
-        }
-#endif
         return dict;
     }
 
