@@ -1,3 +1,5 @@
+using AtomicDSL;
+
 namespace Fusion;
 
 public class FusionAssetPipeline
@@ -25,5 +27,18 @@ public class FusionAssetPipeline
         var file = Path.Combine(BuildTool.BinPath, Path.GetFileName(input));
         Console.WriteLine($"Fusion.Assets >> Copy file {input} -> {file}");
         File.Copy(input, file, true);
+    }
+
+    public static void MapAtomicFiles(string dir, Action<string> cbEnumerate)
+    {
+        Directory.EnumerateFiles(dir)
+            .ToList()
+            .ForEach(file =>
+            {
+                if (!file.EndsWith(AtomicConstants.FileExtention))
+                    return;
+                // We found an atomic file!
+                cbEnumerate(file);
+            });
     }
 }

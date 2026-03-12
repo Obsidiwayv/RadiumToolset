@@ -1,9 +1,19 @@
 namespace Fusion.Pipeline;
 
-public class LibraryDir
+public class LibraryDir(string dir)
 {
     public string? OSLibraryDir { get; set; }
+    public string? LibrarySourceDir { get; set; }
     public required string LibraryIncludeDir { get; set; }
+
+    public string GetMessage()
+    {
+        if (OSLibraryDir != null)
+        {
+            return  $"LibraryDir >> Found library '{dir}'";
+        } 
+        return $"LibraryDir >> Found header only library '{dir}'";
+    }
 }
 
 public class FusionLibrarySearcher
@@ -19,26 +29,17 @@ public class FusionLibrarySearcher
         {
             var osLib = MatchOSLibraryDir(dir);
             var includeDir = $"{dir}/include";
-            if (Path.Exists(osLib))
+            var sourceDir = $"{dir}/Source";
+            
+            LibraryDir lib = new(dir)
             {
-                Console.WriteLine($"Library Search >> Found library {dir}");
-                libs.Add(new()
-                {
-                    LibraryIncludeDir = includeDir,
-                    OSLibraryDir = osLib
-                });
-            } else
-            {
-                if (Path.Exists(includeDir))
-                {
-                    Console.WriteLine(
-                        $"Library Search >> Found header only library {dir}");
-                    libs.Add(new()
-                    {
-                        LibraryIncludeDir = includeDir
-                    });
-                }
-            }
+                LibraryIncludeDir = includeDir
+            };
+            if (Path.Exists(osLib)) lib.OSLibraryDir = osLib;
+            if (Path.Exists(sourceDir)) lib.LibrarySourceDir = sourceDir; 
+            Console.WriteLine(lib.GetMessage());
+            
+            libs.Add(lib);
         }
         return libs;
     }

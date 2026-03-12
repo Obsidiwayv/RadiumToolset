@@ -6,18 +6,11 @@ using RadiumCommon;
 
 namespace Fusion;
 
-
 public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
 {
-    private List<string> IncludeArgument = [];
-    private List<string> SourcesArgument = [];
-    private List<string> LibraryArguments = [];
-    private List<CompileCommands> Database = [];
-
-    private readonly JsonSerializerOptions DatabaseOpt = new()
-    {
-        WriteIndented = true
-    };
+    private List<string> IncludeFragment = [];
+    private List<string> SourceFragment = [];
+    private List<string> LibraryFragments = [];
 
     public void Assemble()
     {
@@ -31,28 +24,28 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         var binaryName = GetKeyValuePair(@strings!, "target");
         var libDir = GetKeyValuePair(@strings!, "libs");
 
+        var binaryType = GetKeyValuePair(@strings!, "type");
+        var binaryLibraryType = GetKeyValuePair(@strings!, "library_type");
+
         foreach (var include in @includes!.ArrayChildren)
         {
-            IncludeArgument.Add($"-I{include}");
+            IncludeFragment.Add($"-I{include}");
         }
         foreach (var source in @sources!.ArrayChildren)
         {
             if (source.EndsWith('/'))
             {
-                Directory.EnumerateFiles(
-                    $"{Directory.GetCurrentDirectory()}/{source}",
-                    "*", SearchOption.AllDirectories)
-                    .ToList()
-                    .ForEach(file =>
-                    {
-                        Console.WriteLine(
-                            $"Fusion.Assembler >> Found source file {file}");
-                        SourcesArgument.Add(file);
-                    });
+                SourceFiles.MapSources(source, (file) =>
+                {
+                    Console.WriteLine(
+                        $"Fusion.Assembler >> Found source file {file}");
+                    SourceFragment.Add(file);
+                });
             }
             else
             {
-                SourcesArgument.Add(source);
+                if (source.EndsWith(FileExtensions.GetSharedLibraryEXT())) continue;
+                SourceFragment.Add(source);
             }
         }
 
@@ -68,7 +61,7 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
                     {
                         if (file.EndsWith(FileExtensions.GetStaticLibraryEXT()))
                         {
-                            LibraryArguments.Add(file);
+                            LibraryFragments.Add(file);
                         }
                         if (file.EndsWith(FileExtensions.GetSharedLibraryEXT()))
                         {
@@ -76,22 +69,54 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
                         }
                     });
                 }
-                IncludeArgument.Add($"-I{lib.LibraryIncludeDir}");
+                if (lib.LibrarySourceDir != null)
+                {
+                    SourceFiles.MapSources(lib.LibrarySourceDir, (file) =>
+                    {
+                        Console.WriteLine(
+                            $"Fusion.Assembler >> Found library source file {file}");
+                        SourceFragment.Add(file);
+                    });
+                }
+                IncludeFragment.Add($"-I{lib.LibraryIncludeDir}");
             }
         }
 
-        List<string> clangArguments = [
-            ..SourcesArgument,
-            ..IncludeArgument,
-            ..LibraryArguments,
+        List<string> clangFragments = [
             ..@flags!.ArrayChildren,
-            $"-o {BuildTool.BinPath}/{binaryName!.Value.Value}",
+            ..SourceFragment,
+            ..IncludeFragment,
+            ..LibraryFragments,
         ];
+
+        string binaryOutput = $"-o {BuildTool.BinPath}/{binaryName!.Value.Value}";
+        if (binaryType.HasValue && binaryType.Value.Value == "library")
+        {
+            if (!binaryLibraryType.HasValue)
+            {
+                throw new Exception(
+                    "Binary has 'type = \"library\"' set, 'library_type' is null"
+                );
+            }
+            if (binaryLibraryType.Value.Value == "shared")
+            {
+                if (OperatingSystem.IsMacOS())
+                {
+                    clangFragments.Add("-dynamiclib -shared");
+                }
+                binaryOutput += FileExtensions.GetSharedLibraryEXT();
+            }
+        }
+
+        clangFragments.Add(binaryOutput);
+
+        Console.WriteLine(string.Join(" ", clangFragments));
+
         Console.WriteLine(
-            $"Fusion.Assembler >> Starting compilation of {SourcesArgument.Count} sources");
+            $"Fusion.Assembler >> Starting compilation of {SourceFragment.Count} sources");
         Process proc = new();
         proc.StartInfo.FileName = "clang++";
-        proc.StartInfo.Arguments = string.Join(" ", clangArguments);
+        proc.StartInfo.Arguments = string.Join(" ", clangFragments);
         proc.StartInfo.RedirectStandardOutput = true;
         proc.Start();
 
@@ -106,17 +131,14 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         {
             FusionAssetPipeline.Copy(asset);
         }
-        foreach (var s in SourcesArgument)
+        foreach (var s in SourceFragment)
         {
-            Database.Add(new()
+            FusionCompileCommands.Database.Add(new()
             {
-                Arguments = clangArguments.ToArray(),
+                Arguments = clangFragments.ToArray(),
                 File = s.Trim()
             });
         }
-        File.WriteAllText(
-            "compile_commands.json",
-            JsonSerializer.Serialize(Database, DatabaseOpt));
     }
 
     private static KeyValuePair<string, string>? GetKeyValuePair(

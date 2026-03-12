@@ -35,7 +35,7 @@ public class AtomicParser
             if (node.TokenType == AtomicLexerTokens.Bracket
                 && nodes.Count > index
                 // Make sure THIS is not a target
-                && nodes[index - 1].TokenType != AtomicLexerTokens.StringLiteral
+                && nodes[index - 1].Value == "="
                 && node.Value == "{")
             {
                 AtomicNode keyType = nodes[index - 2];

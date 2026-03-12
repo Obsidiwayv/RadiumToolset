@@ -1,5 +1,6 @@
 ﻿using AtomicDSL;
 using AtomicDSL.Language;
+using Fusion.Pipeline;
 using RadiumCommon;
 
 namespace Fusion;
@@ -13,28 +14,42 @@ public class BuildTool
         if (!Directory.Exists(BinPath))
         {
             Directory.CreateDirectory(BinPath);
-        };
+        }
+        ;
 
         //AnsiColors.Init();
-        
-        string path = "";
-        if (!args[0].EndsWith(AtomicConstants.FileExtention))
+
+        if (args.Length > 1)
         {
-            Directory.EnumerateFiles(args[0])
-                .ToList()
-                .ForEach(file =>
+            foreach (var arg in args)
+            {
+                RunSteps(arg);
+            }
+        }
+        else
+        {
+            string path = "";
+            if (!args[0].EndsWith(AtomicConstants.FileExtention))
+            {
+                FusionAssetPipeline.MapAtomicFiles(args[0], (file) =>
                 {
-                    if (!file.EndsWith(AtomicConstants.FileExtention))
-                        return;
-                    // We found an atomic file!
                     path = file;
                 });
-        } else
-        {
-            // Its already an atomic file just pass the argument
-            path = args[0];
+            }
+            else
+            {
+                // Its already an atomic file just pass the argument
+                path = args[0];
+            }
+            RunSteps(path);
         }
-        List<AtomicNode> nodes = 
+
+        FusionCompileCommands.Finish();
+    }
+
+    private static void RunSteps(string path)
+    {
+        List<AtomicNode> nodes =
             AtomicLexer.Run(File.ReadAllText(path).ToCharArray());
         FusionCompilationStep step = new(AtomicParser.Use(nodes));
         step.Assemble();
