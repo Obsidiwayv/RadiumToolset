@@ -10,7 +10,6 @@ public class SourceFiles
             .ToList()
             .ForEach(file =>
             {
-
                 cbSource(file);
             });
     }

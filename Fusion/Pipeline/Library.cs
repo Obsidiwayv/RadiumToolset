@@ -20,6 +20,7 @@ public class FusionLibrarySearcher
 {
     public static string Darwin = "MacOS";
     public static string Linux = "Linux";
+    public static string Windows = "Windows";
 
     public static List<LibraryDir> Search(string directory)
     {
@@ -50,6 +51,10 @@ public class FusionLibrarySearcher
         if (OperatingSystem.IsMacOS())
         {
             path = Darwin;
+        }
+        if (OperatingSystem.IsWindows())
+        {
+            path = Windows;
         }
         return $"{dir}/{path}";
     }

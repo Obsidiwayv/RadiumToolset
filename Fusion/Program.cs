@@ -7,15 +7,15 @@ namespace Fusion;
 
 public class BuildTool
 {
-    public static string BinPath = @"Bin";
+    public static string OutputPath = @"Bin";
+    public static string LibsOutDir = @$"{OutputPath}/Libs";
+    public static string BinPath = @$"{OutputPath}/Output";
 
     public static void Main(string[] args)
     {
-        if (!Directory.Exists(BinPath))
-        {
-            Directory.CreateDirectory(BinPath);
-        }
-        ;
+        CreateDir(OutputPath);
+        CreateDir(BinPath);
+        CreateDir(LibsOutDir);
 
         //AnsiColors.Init();
 
@@ -53,5 +53,13 @@ public class BuildTool
             AtomicLexer.Run(File.ReadAllText(path).ToCharArray());
         FusionCompilationStep step = new(AtomicParser.Use(nodes));
         step.Assemble();
+    }
+
+    private static void CreateDir(string dir)
+    {
+        if (!Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        };
     }
 }

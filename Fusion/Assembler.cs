@@ -3,6 +3,7 @@ using System.Text.Json;
 using AtomicDSL;
 using Fusion.Pipeline;
 using RadiumCommon;
+using RadiumCommon.Exceptions;
 
 namespace Fusion;
 
@@ -11,6 +12,7 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
     private List<string> IncludeFragment = [];
     private List<string> SourceFragment = [];
     private List<string> LibraryFragments = [];
+    private List<string> FlagFragments = [];
 
     public void Assemble()
     {
@@ -82,8 +84,40 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
             }
         }
 
+        foreach (var flag in @flags!.ArrayChildren)
+        {
+            if (flag.Contains(';'))
+            {
+                string[] frag = flag.Split(";");
+                if (frag[0] == FusionLibrarySearcher.Windows)
+                {
+                    FlagFragments.Add(frag[1]);
+                }
+            } else
+            {
+                FlagFragments.Add(flag);
+            }
+        }
+
+        if (binaryType!.Value.Value == "binary")
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                FlagFragments.Add("-Wl,/SUBSYSTEM:WINDOWS");
+                FlagFragments.Add("-Wl,/NOIMPLIB");
+                FlagFragments.Add("-Wl,/NOEXP");
+            }
+        }
+        if (binaryType.Value.Value == "library")
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                FlagFragments.Add($"-Wl,/IMPLIB:{BuildTool.LibsOutDir}/{binaryName!.Value.Value}.lib");
+            }
+        }
+
         List<string> clangFragments = [
-            ..@flags!.ArrayChildren,
+            ..FlagFragments,
             ..SourceFragment,
             ..IncludeFragment,
             ..LibraryFragments,
@@ -104,8 +138,17 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
                 {
                     clangFragments.Add("-dynamiclib -shared");
                 }
+                if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+                {
+                    clangFragments.Add("-shared");
+                }
                 binaryOutput += FileExtensions.GetSharedLibraryEXT();
             }
+        }
+
+        if (binaryType.Value.Value == "binary" || binaryType.Value.Value == "console")
+        {
+            binaryOutput += FileExtensions.GetOSExecutableEXT();
         }
 
         clangFragments.Add(binaryOutput);
@@ -115,7 +158,7 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         Console.WriteLine(
             $"Fusion.Assembler >> Starting compilation of {SourceFragment.Count} sources");
         Process proc = new();
-        proc.StartInfo.FileName = "clang++";
+        proc.StartInfo.FileName = $"{FusionLocation.LLVMLocation}clang++";
         proc.StartInfo.Arguments = string.Join(" ", clangFragments);
         proc.StartInfo.RedirectStandardOutput = true;
         proc.Start();

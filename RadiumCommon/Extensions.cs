@@ -41,4 +41,10 @@ public class FileExtensions
         }
         throw new RadiumUnknownOS();
     }
+
+    public static string GetOSExecutableEXT()
+    {
+        if (OperatingSystem.IsWindows()) return ".exe";
+        return "";
+    }
 }
