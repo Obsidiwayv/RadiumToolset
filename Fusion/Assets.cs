@@ -6,7 +6,7 @@ public class FusionAssetPipeline
 {
     public static void Copy(string input)
     {
-        if (File.Exists(input))
+        if (!File.GetAttributes(input).HasFlag(FileAttributes.Directory))
         {
             CopyFile(input);
             return;

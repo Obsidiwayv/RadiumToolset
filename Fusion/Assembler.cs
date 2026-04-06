@@ -158,7 +158,8 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         Console.WriteLine(
             $"Fusion.Assembler >> Starting compilation of {SourceFragment.Count} sources");
         Process proc = new();
-        proc.StartInfo.FileName = $"{FusionLocation.LLVMLocation}clang++";
+        var compiler = $"{FusionLocation.LLVMLocation}clang++";
+        proc.StartInfo.FileName = compiler;
         proc.StartInfo.Arguments = string.Join(" ", clangFragments);
         proc.StartInfo.RedirectStandardOutput = true;
         proc.Start();
@@ -174,11 +175,13 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         {
             FusionAssetPipeline.Copy(asset);
         }
+
+        var withCompiler = new[] { compiler }.Concat(clangFragments.ToArray());
         foreach (var s in SourceFragment)
         {
             FusionCompileCommands.Database.Add(new()
             {
-                Arguments = clangFragments.ToArray(),
+                Arguments = withCompiler.ToArray(),
                 File = s.Trim()
             });
         }
