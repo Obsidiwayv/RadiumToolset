@@ -1,3 +1,5 @@
+using RadiumCommon;
+
 namespace Fusion.Pipeline;
 
 public class LibraryDir(string dir)
@@ -10,9 +12,9 @@ public class LibraryDir(string dir)
     {
         if (OSLibraryDir != null)
         {
-            return  $"LibraryDir >> Found library '{dir}'";
+            return  $"LibraryDir >> Found library '%b{dir}%c'";
         } 
-        return $"LibraryDir >> Found header only library '{dir}'";
+        return $"LibraryDir >> Found header only library '%b{dir}%c'";
     }
 }
 
@@ -38,7 +40,7 @@ public class FusionLibrarySearcher
             };
             if (Path.Exists(osLib)) lib.OSLibraryDir = osLib;
             if (Path.Exists(sourceDir)) lib.LibrarySourceDir = sourceDir; 
-            Console.WriteLine(lib.GetMessage());
+            RadiumLogger.Write(lib.GetMessage());
             
             libs.Add(lib);
         }

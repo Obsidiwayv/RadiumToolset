@@ -14,6 +14,8 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
     private List<string> LibraryFragments = [];
     private List<string> FlagFragments = [];
 
+    private readonly Dictionary<string, string> FileHashes = [];
+
     public void Assemble()
     {
         dict.TryGetValue("strings", out AtomicLanguageNode? @strings);
@@ -29,6 +31,8 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         var binaryType = GetKeyValuePair(@strings!, "type");
         var binaryLibraryType = GetKeyValuePair(@strings!, "library_type");
 
+        var HashDatabase = SourceFiles.GetFileHashesFile(binaryName!.Value.Value);
+
         foreach (var include in @includes!.ArrayChildren)
         {
             IncludeFragment.Add($"-I{include}");
@@ -39,15 +43,20 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
             {
                 SourceFiles.MapSources(source, (file) =>
                 {
-                    Console.WriteLine(
-                        $"Fusion.Assembler >> Found source file {file}");
                     SourceFragment.Add(file);
+                    ComputeHash(file);
+                    RadiumLogger.Write(
+                        $"Fusion.Assembler >> {CheckHash(file, HashDatabase)} >> Found source file %m{file}%c");
                 });
             }
             else
             {
                 if (source.EndsWith(FileExtensions.GetSharedLibraryEXT())) continue;
                 SourceFragment.Add(source);
+                ComputeHash(source);
+                RadiumLogger.Write(
+                    $"Fusion.Assembler >> {CheckHash(source, HashDatabase)} >> Source file added %m{source}%c"
+                );
             }
         }
 
@@ -75,8 +84,8 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
                 {
                     SourceFiles.MapSources(lib.LibrarySourceDir, (file) =>
                     {
-                        Console.WriteLine(
-                            $"Fusion.Assembler >> Found library source file {file}");
+                        RadiumLogger.Write(
+                            $"Fusion.Assembler >> Found library source file %m{file}%c");
                         SourceFragment.Add(file);
                     });
                 }
@@ -153,10 +162,8 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
 
         clangFragments.Add(binaryOutput);
 
-        Console.WriteLine(string.Join(" ", clangFragments));
-
-        Console.WriteLine(
-            $"Fusion.Assembler >> Starting compilation of {SourceFragment.Count} sources");
+        RadiumLogger.Write(
+            $"Fusion.Assembler >> Starting compilation of %b{SourceFragment.Count}%c sources");
         Process proc = new();
         var compiler = $"{FusionLocation.LLVMLocation}clang++";
         proc.StartInfo.FileName = compiler;
@@ -165,10 +172,11 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         proc.Start();
 
         LogProcessOutput(proc);
+        VerifyHashes(binaryName!.Value.Value);
 
         if (@assets!.ArrayChildren.Count != 0)
         {
-            Console.WriteLine(
+            RadiumLogger.Write(
                 $"Populating {BuildTool.BinPath}...");
         }
         foreach (var asset in @assets.ArrayChildren)
@@ -206,7 +214,48 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         {
             string? line = proc.StandardOutput.ReadLine();
             if (!string.IsNullOrWhiteSpace(line))
-                Console.WriteLine(line);
+                RadiumLogger.Write(line);
+        }
+    }
+
+    private void ComputeHash(string filePath)
+    {
+        string FileContentHash = FusionHash.ToHashString(File.ReadAllText(filePath));
+        FileHashes.Add(filePath, FileContentHash);
+    }
+
+    private void VerifyHashes(string proj)
+    {
+        Dictionary<string, string> HashKeys = [];
+        foreach (var (file, hash) in FileHashes)
+        {
+            // If the file doesnt exist then we shouldnt count this one in the dictionary
+            if (!File.Exists(file))
+            {
+                RadiumLogger.Write($"%rFile Deleted%c >> {file}");
+            }
+            // Add the keys to the new dictionary for writing
+            HashKeys.Add(file, hash);
+        }
+        SourceFiles.WriteHashFile(HashKeys, proj);
+    }
+
+    private string CheckHash(string filePath, Dictionary<string, string> hashDict)
+    {
+        hashDict.TryGetValue(filePath, out string? hash);
+        FileHashes.TryGetValue(filePath, out string? newHash);
+        if (hash != null && newHash != null)
+        {
+            if (FusionHash.Compare(hash, newHash))
+            {
+                return "%gOriginal%c";
+            } else
+            {
+                return "%rUpdated%c";
+            }
+        } else
+        {
+            return "%rAdded%c";
         }
     }
 }

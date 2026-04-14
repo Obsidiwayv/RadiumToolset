@@ -1,4 +1,5 @@
 using AtomicDSL;
+using RadiumCommon;
 
 namespace Fusion;
 
@@ -25,7 +26,7 @@ public class FusionAssetPipeline
     private static void CopyFile(string input)
     {
         var file = Path.Combine(BuildTool.BinPath, Path.GetFileName(input));
-        Console.WriteLine($"Fusion.Assets >> Copy file {input} -> {file}");
+        RadiumLogger.Write($"Fusion.Assets >> Copy file %b{input}%c -> %b{file}%c");
         File.Copy(input, file, true);
     }
 
