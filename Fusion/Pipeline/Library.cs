@@ -2,6 +2,13 @@ using RadiumCommon;
 
 namespace Fusion.Pipeline;
 
+public enum FusionLibraryType
+{
+    SharedLibrary,
+    StaticLibrary,
+    None
+}
+
 public class LibraryDir(string dir)
 {
     public string? OSLibraryDir { get; set; }

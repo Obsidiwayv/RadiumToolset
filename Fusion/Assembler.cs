@@ -125,14 +125,9 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
             }
         }
 
-        List<string> clangFragments = [
-            ..FlagFragments,
-            ..SourceFragment,
-            ..IncludeFragment,
-            ..LibraryFragments,
-        ];
-
         string binaryOutput = $"-o {BuildTool.BinPath}/{binaryName!.Value.Value}";
+        FusionLibraryType LibraryType = FusionLibraryType.None;
+
         if (binaryType.HasValue && binaryType.Value.Value == "library")
         {
             if (!binaryLibraryType.HasValue)
@@ -145,13 +140,18 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
             {
                 if (OperatingSystem.IsMacOS())
                 {
-                    clangFragments.Add("-dynamiclib -shared");
+                    FlagFragments.Add("-dynamiclib -shared");
                 }
                 if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
                 {
-                    clangFragments.Add("-shared");
+                    FlagFragments.Add("-shared");
                 }
+                LibraryType = FusionLibraryType.SharedLibrary;
                 binaryOutput += FileExtensions.GetSharedLibraryEXT();
+                FlagFragments.Add("-c");
+            } else
+            {
+                LibraryType = FusionLibraryType.StaticLibrary;
             }
         }
 
@@ -160,18 +160,46 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
             binaryOutput += FileExtensions.GetOSExecutableEXT();
         }
 
-        clangFragments.Add(binaryOutput);
-
         RadiumLogger.Write(
             $"Fusion.Assembler >> Starting compilation of %b{SourceFragment.Count}%c sources");
-        Process proc = new();
-        var compiler = $"{FusionLocation.LLVMLocation}clang++";
-        proc.StartInfo.FileName = compiler;
-        proc.StartInfo.Arguments = string.Join(" ", clangFragments);
-        proc.StartInfo.RedirectStandardOutput = true;
-        proc.Start();
+        
+        string CacheDir = BuildTool.ManageProjectCacheDir(binaryName.Value.Value);
 
-        LogProcessOutput(proc);
+        List<string> ObjectFiles = [];
+
+        foreach (string SourceFile in SourceFragment)
+        {
+            string SourceFileName = Path.GetFileName(SourceFile);
+            string ObjectFilePath = Path.Join(CacheDir, 
+                $"{Path.GetFileNameWithoutExtension(SourceFile)}{FileExtensions.GetObjectFileEXT()}");
+
+            List<string> clangFragments = [
+                ..FlagFragments,
+                ..IncludeFragment,
+                ..LibraryFragments,
+                SourceFile,
+                $"-o {ObjectFilePath}"
+            ];
+
+            // Put this argument to the compile_commands.json
+            var withCompiler = new[] { FusionLocation.GetClangExecutable() }.Concat(clangFragments.ToArray());
+            FusionCompileCommands.Database.Add(new()
+            {
+                Arguments = withCompiler.ToArray(),
+                File = SourceFile.Trim()
+            });
+
+            RadiumLogger.Write($"Compiling %b{SourceFile}%c");
+            // Compile Object file
+            FusionClang.Invoke(clangFragments);
+            ObjectFiles.Add(ObjectFilePath);
+        }
+
+        if (LibraryType != FusionLibraryType.StaticLibrary)
+        {
+            FusionClang.Invoke([$"-o {binaryOutput}", ..ObjectFiles]);
+        }
+
         VerifyHashes(binaryName!.Value.Value);
 
         if (@assets!.ArrayChildren.Count != 0)
@@ -182,16 +210,6 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         foreach (var asset in @assets.ArrayChildren)
         {
             FusionAssetPipeline.Copy(asset);
-        }
-
-        var withCompiler = new[] { compiler }.Concat(clangFragments.ToArray());
-        foreach (var s in SourceFragment)
-        {
-            FusionCompileCommands.Database.Add(new()
-            {
-                Arguments = withCompiler.ToArray(),
-                File = s.Trim()
-            });
         }
     }
 
@@ -206,16 +224,6 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
         }
         // If there was no match then return null
         return null;
-    }
-
-    private static void LogProcessOutput(Process proc)
-    {
-        while (!proc.StandardOutput.EndOfStream)
-        {
-            string? line = proc.StandardOutput.ReadLine();
-            if (!string.IsNullOrWhiteSpace(line))
-                RadiumLogger.Write(line);
-        }
     }
 
     private void ComputeHash(string filePath)
@@ -233,6 +241,7 @@ public class FusionCompilationStep(Dictionary<string, AtomicLanguageNode> dict)
             if (!File.Exists(file))
             {
                 RadiumLogger.Write($"%rFile Deleted%c >> {file}");
+                continue;
             }
             // Add the keys to the new dictionary for writing
             HashKeys.Add(file, hash);

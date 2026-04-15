@@ -42,6 +42,12 @@ public class FileExtensions
         throw new RadiumUnknownOS();
     }
 
+    public static string GetObjectFileEXT()
+    {
+        if (OperatingSystem.IsWindows()) return ".obj";
+        else return ".o"; // Mach-O (MacOS) or Object (Linux/BSD)
+    }
+
     public static string GetOSExecutableEXT()
     {
         if (OperatingSystem.IsWindows()) return ".exe";

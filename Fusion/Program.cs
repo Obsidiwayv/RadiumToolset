@@ -10,12 +10,14 @@ public class BuildTool
     public static string OutputPath = @"Bin";
     public static string LibsOutDir = @$"{OutputPath}/Libs";
     public static string BinPath = @$"{OutputPath}/Output";
+    public static string ObjCachePath = @$"{OutputPath}/Cache";
 
     public static void Main(string[] args)
     {
         CreateDir(OutputPath);
         CreateDir(BinPath);
         CreateDir(LibsOutDir);
+        CreateDir(ObjCachePath);
 
         //AnsiColors.Init();
 
@@ -45,6 +47,14 @@ public class BuildTool
         }
 
         FusionCompileCommands.Finish();
+        //Directory.Delete(ObjCachePath, true);
+    }
+
+    public static string ManageProjectCacheDir(string project)
+    {
+        var CacheDir = Path.Join(ObjCachePath, project);
+        CreateDir(CacheDir);
+        return CacheDir;
     }
 
     private static void RunSteps(string path)
