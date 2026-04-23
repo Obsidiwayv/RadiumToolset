@@ -6,13 +6,15 @@ namespace Fusion;
 
 public class FusionClang
 {
-    // Uses llvm-ar
+    // Uses the Apple or linux ar command
     public static void UseARTool(string binaryName, List<string> ObjectFiles)
     {
-        CreateInvoke($"{FusionLocation.LLVMLocation}llvm-ar", [
-            $"{BuildTool.LibsOutDir}/{binaryName}{FileExtensions.GetSharedLibraryEXT()}",
-            ..ObjectFiles
-        ]);
+        // TODO
+    }
+
+    public static void WindowsCompileToShared(string binaryName, List<string> ObjectFiles)
+    {
+        CreateInvoke($"{FusionLocation.LLVMLocation}lld-link", []);
     }
 
     public static void Invoke(List<string> arguments)

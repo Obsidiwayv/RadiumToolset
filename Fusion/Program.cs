@@ -11,6 +11,15 @@ public class BuildTool
     public static string LibsOutDir = @$"{OutputPath}/Libs";
     public static string BinPath = @$"{OutputPath}/Output";
     public static string ObjCachePath = @$"{OutputPath}/Cache";
+    private static List<RadiumKeyValueStore> DefaultParseRules = [
+        new("target", []),
+        new("type", []),
+        new("library_type", []),
+        new("libs", []),
+        new("sources", []),
+        new("includes", []),
+        new("flags", [])
+    ];
 
     public static void Main(string[] args)
     {
@@ -61,8 +70,12 @@ public class BuildTool
     {
         List<AtomicNode> nodes =
             AtomicLexer.Run(File.ReadAllText(path).ToCharArray());
-        FusionCompilationStep step = new(AtomicParser.Use(nodes));
-        step.Assemble();
+        FusionCompilationStep step = new(AtomicParser.Use(nodes, DefaultParseRules));
+        //step.Assemble();
+        foreach (var Store in DefaultParseRules)
+        {
+            Store.Value.Clear();
+        }
     }
 
     private static void CreateDir(string dir)

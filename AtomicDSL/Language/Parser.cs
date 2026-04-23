@@ -1,35 +1,36 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
+using RadiumCommon;
 
 namespace AtomicDSL.Language;
 
 public class AtomicParser
 {
-    public static Dictionary<string, AtomicLanguageNode> Use(List<AtomicNode> nodes)
+    public static List<RadiumKeyValueStore> Use(
+        List<AtomicNode> nodes, 
+        List<RadiumKeyValueStore> store)
     {
-        Dictionary<string, AtomicLanguageNode> dict = new()
-        {
-            {"includes", new()},
-            {"sources", new()},
-            {"assets", new()},
-            {"flags", new()},
-            {"strings", new()},
-        };
-
-        dict.TryGetValue("strings", out AtomicLanguageNode? strs);
-
         for (int index = 0; index < nodes.Count; index++)
         {
             AtomicNode node = nodes[index];
 
             if (index != 0
                 && nodes[index].TokenType == AtomicLexerTokens.StringLiteral
-                && strs != null
                 && VerifyStringIndex(index, nodes))
             {
-                string keyType = index > 1 
+                string AtomicKeyName = index > 1
                         ? nodes[index - 2].Value
                         : "target";
-                strs.KeywordPair.Add(new(keyType, ParseString(node.Value)));
+
+                var StringValue = ParseString(node.Value);
+
+                foreach (var kv in store)
+                {
+                    if (kv.Key.Equals(AtomicKeyName))
+                    {
+                        kv.Value.Add(StringValue);
+                    }
+                }
             }
 
             if (node.TokenType == AtomicLexerTokens.Bracket
@@ -38,14 +39,8 @@ public class AtomicParser
                 && nodes[index - 1].Value == "="
                 && node.Value == "{")
             {
-                AtomicNode keyType = nodes[index - 2];
-                dict.TryGetValue(keyType.Value, out AtomicLanguageNode? keyValue);
-
-                if (keyValue == null)
-                {
-                    continue;
-                }
-                if (keyType.Value == "strings") continue;
+                AtomicNode AtomicKeyName = nodes[index - 2];
+                if (AtomicKeyName.Value == "strings") continue;
                 index++;
 
                 for (int sIndex = 0 + index; sIndex < nodes.Count; sIndex++)
@@ -53,11 +48,17 @@ public class AtomicParser
                     AtomicNode subNode = nodes[sIndex];
 
                     if (subNode.Value == "}") break;
-                    keyValue.ArrayChildren.Add(subNode.Value);
+                    foreach (var kv in store)
+                    {
+                        if (kv.Key.Equals(AtomicKeyName.Value))
+                        {
+                            kv.Value.Add(subNode.Value);
+                        }
+                    }
                 }
             }
         }
-        return dict;
+        return store;
     }
 
     private static bool VerifyStringIndex(int index, List<AtomicNode> nodes)
