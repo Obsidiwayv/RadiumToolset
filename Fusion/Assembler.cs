@@ -7,24 +7,44 @@ using RadiumCommon.Exceptions;
 
 namespace Fusion;
 
-public class FusionCompilationStep(List<RadiumKeyValueStore> store)
+public class FusionCompilationStep
 {
     private List<string> IncludeFragment = [];
     private List<string> SourceFragment = [];
     private List<string> LibraryFragments = [];
     private List<string> FlagFragments = [];
 
-    private readonly Dictionary<string, string> FileHashes = [];
+    public readonly SourceFiles SourceFileFactory;
 
-    // public void Assemble()
-    // {
+    private readonly List<RadiumKeyValueStore<AtomicKeyTypes>> AtomicKeyValueStores;
+
+    public FusionCompilationStep(List<RadiumKeyValueStore<AtomicKeyTypes>> store)
+    {
+        // Init factories
+        SourceFileFactory = new(this);
+
+        AtomicKeyValueStores = store;
+    }
+
+    public void Assemble()
+    {
     //     dict.TryGetValue("strings", out AtomicLanguageNode? @strings);
     //     dict.TryGetValue("includes", out AtomicLanguageNode? @includes);
     //     dict.TryGetValue("sources", out AtomicLanguageNode? @sources);
     //     dict.TryGetValue("assets", out AtomicLanguageNode? @assets);
     //     dict.TryGetValue("flags", out AtomicLanguageNode? @flags);
 
-    //     var AtomicBinaryName = KeyValueUtil.GetStoreFromName(store, "target").Get<string>();
+        string AtomicBinaryName = KeyValueUtil.GetStoreFromName(AtomicKeyValueStores, "target").Get<string>();
+        var VersionStore = KeyValueUtil.GetStoreFromName(AtomicKeyValueStores, "version");
+        
+        if (!VersionStore.IsEmpty())
+        {
+            RadiumLogger.Write(
+                $"Project %m{AtomicBinaryName}%c is using atomic version %b{VersionStore.Get<string>()}%c");
+        } else 
+        {
+            throw new Exception($"{AtomicBinaryName} must define a version attribute");
+        }
 
     //     // This will always be available 
     //     var binaryName = GetKeyValuePair(@strings!, "target");
@@ -61,6 +81,9 @@ public class FusionCompilationStep(List<RadiumKeyValueStore> store)
     //             );
     //         }
     //     }
+
+    SourceFileFactory.SearchSources(KeyValueUtil.GetStoreFromName(
+        AtomicKeyValueStores, "sources").Get<List<string>>());
 
     //     if (libDir.HasValue)
     //     {
@@ -213,7 +236,7 @@ public class FusionCompilationStep(List<RadiumKeyValueStore> store)
     //     {
     //         FusionAssetPipeline.Copy(asset);
     //     }
-    // }
+    }
 
     // private static KeyValuePair<string, string>? GetKeyValuePair(
     //     AtomicLanguageNode pairList,
@@ -226,47 +249,5 @@ public class FusionCompilationStep(List<RadiumKeyValueStore> store)
     //     }
     //     // If there was no match then return null
     //     return null;
-    // }
-
-    // private void ComputeHash(string filePath)
-    // {
-    //     string FileContentHash = FusionHash.ToHashString(File.ReadAllText(filePath));
-    //     FileHashes.Add(filePath, FileContentHash);
-    // }
-
-    // private void VerifyHashes(string proj)
-    // {
-    //     Dictionary<string, string> HashKeys = [];
-    //     foreach (var (file, hash) in FileHashes)
-    //     {
-    //         // If the file doesnt exist then we shouldnt count this one in the dictionary
-    //         if (!File.Exists(file))
-    //         {
-    //             RadiumLogger.Write($"%rFile Deleted%c >> {file}");
-    //             continue;
-    //         }
-    //         // Add the keys to the new dictionary for writing
-    //         HashKeys.Add(file, hash);
-    //     }
-    //     SourceFiles.WriteHashFile(HashKeys, proj);
-    // }
-
-    // private string CheckHash(string filePath, Dictionary<string, string> hashDict)
-    // {
-    //     hashDict.TryGetValue(filePath, out string? hash);
-    //     FileHashes.TryGetValue(filePath, out string? newHash);
-    //     if (hash != null && newHash != null)
-    //     {
-    //         if (FusionHash.Compare(hash, newHash))
-    //         {
-    //             return "%gOriginal%c";
-    //         } else
-    //         {
-    //             return "%rUpdated%c";
-    //         }
-    //     } else
-    //     {
-    //         return "%rAdded%c";
-    //     }
     // }
 }

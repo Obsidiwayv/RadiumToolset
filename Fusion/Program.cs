@@ -7,18 +7,21 @@ namespace Fusion;
 
 public class BuildTool
 {
-    public static string OutputPath = @"Bin";
-    public static string LibsOutDir = @$"{OutputPath}/Libs";
-    public static string BinPath = @$"{OutputPath}/Output";
-    public static string ObjCachePath = @$"{OutputPath}/Cache";
-    private static List<RadiumKeyValueStore> DefaultParseRules = [
-        new("target", []),
-        new("type", []),
-        new("library_type", []),
-        new("libs", []),
-        new("sources", []),
-        new("includes", []),
-        new("flags", [])
+    public static readonly string OutputPath = @"Bin";
+    public static readonly string LibsOutDir = @$"{OutputPath}/Libs";
+    public static readonly string BinPath = @$"{OutputPath}/Output";
+    public static readonly string ObjCachePath = @$"{OutputPath}/Cache";
+    public static readonly string OutputRequiredPath = @$"{BinPath}/Required";
+    
+    // These are all blocks, attributes will be added later in the compilation process
+    private static readonly List<RadiumKeyValueStore<AtomicKeyTypes>> DefaultParseRules = [
+        new("target") { KeyStoreType = AtomicKeyTypes.Block },
+        new("type") { KeyStoreType = AtomicKeyTypes.Block },
+        new("library_type") { KeyStoreType = AtomicKeyTypes.Block },
+        new("libs") { KeyStoreType = AtomicKeyTypes.Block },
+        new("sources") { KeyStoreType = AtomicKeyTypes.Block },
+        new("includes") { KeyStoreType = AtomicKeyTypes.Block },
+        new("flags") { KeyStoreType = AtomicKeyTypes.Block }
     ];
 
     public static void Main(string[] args)
@@ -27,6 +30,7 @@ public class BuildTool
         CreateDir(BinPath);
         CreateDir(LibsOutDir);
         CreateDir(ObjCachePath);
+        CreateDir(OutputRequiredPath);
 
         //AnsiColors.Init();
 
@@ -71,7 +75,7 @@ public class BuildTool
         List<AtomicNode> nodes =
             AtomicLexer.Run(File.ReadAllText(path).ToCharArray());
         FusionCompilationStep step = new(AtomicParser.Use(nodes, DefaultParseRules));
-        //step.Assemble();
+        step.Assemble();
         foreach (var Store in DefaultParseRules)
         {
             Store.Value.Clear();

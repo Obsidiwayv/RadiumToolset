@@ -1,12 +1,15 @@
 using System.Text;
+using RadiumCommon;
 
 namespace Fusion.Pipeline;
 
-public class SourceFiles
+public class SourceFiles(FusionCompilationStep step)
 {
-    public static string HashFileCache = $"{BuildTool.OutputPath}/.sourcehashes";
+    public string HashFileCache = $"{BuildTool.OutputPath}/.sourcehashes";
+    private readonly FusionHash HashFactory = new(step);
+    public List<string> Fragments = [];
 
-    public static void MapSources(string dir, Action<string> cbSource)
+    public void MapSources(string dir, Action<string> cbSource)
     {
         Directory.EnumerateFiles(
             $"{Directory.GetCurrentDirectory()}/{dir}",
@@ -18,7 +21,33 @@ public class SourceFiles
             });
     }
 
-    public static void WriteHashFile(Dictionary<string, string> hashes, string projName)
+    public void SearchSources(List<string> sources)
+    {
+        foreach (var source in sources)
+        {
+            if (source.EndsWith('/'))
+            {
+                MapSources(source, (file) =>
+                {
+                    Fragments.Add(file);
+                    HashFactory.ComputeHash(file);
+                    RadiumLogger.Write(
+                        $"Fusion.Assembler >> {HashFactory.CheckHash(file, HashFactory.FileHashes)} >> Found source file %m{file}%c");
+                });
+            }
+            else
+            {
+                if (source.EndsWith(FileExtensions.GetSharedLibraryEXT())) continue;
+                Fragments.Add(source);
+                HashFactory.ComputeHash(source);
+                RadiumLogger.Write(
+                    $"Fusion.Assembler >> {HashFactory.CheckHash(source, HashFactory.FileHashes)} >> Source file added %m{source}%c"
+                );
+            }
+        }
+    }
+
+    public void WriteHashFile(Dictionary<string, string> hashes, string projName)
     {
         StringBuilder HashList = new();
         foreach (var (file, hash) in hashes) 
@@ -28,7 +57,7 @@ public class SourceFiles
         File.WriteAllText($"{HashFileCache}-{projName}", HashList.ToString());
     }
 
-    public static Dictionary<string, string> GetFileHashesFile(string projName)
+    public Dictionary<string, string> GetFileHashesFile(string projName)
     {
         Dictionary<string, string> Hashes = [];
         // The file doesnt exist so just return the empty dictionary

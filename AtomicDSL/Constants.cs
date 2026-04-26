@@ -10,5 +10,20 @@ public enum AtomicLexerTokens
     Keyword, // Default token
     Symbol,
     StringLiteral,
-    Bracket
+    Bracket,
+    AttributeKey,
+    AttributeValue
+}
+
+public enum AtomicKeyTypes
+{
+    /// <summary>
+    /// Define in the block of the projects target
+    /// </summary>
+    Block,
+
+    /// <summary>
+    /// Defined outside of the target using #variable_name variable
+    /// </summary>
+    Attribute
 }
